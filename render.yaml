@@ -1,0 +1,18 @@
+﻿services:
+  - type: web
+    name: uber-unified-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_USER
+        sync: false
+      - key: MONGO_PASS
+        sync: false
+      - key: MONGO_CONTEXT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_MAPS_API
+        sync: false
