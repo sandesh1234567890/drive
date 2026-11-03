@@ -11,6 +11,21 @@ function getOtp(num) {
     return generateOtp(num);
 }
 
+// Upfront fare — Uber pricing model:
+//   fare = (baseFare + bookingFee + distanceRate × km + timeRate × minutes), floored at minimumFare
+// Product line matches Uber India: moto / auto / go(car) / premier
+const RATES = {
+    moto:    { baseFare: 20, bookingFee: 1.5, distanceRate: 8,  timeRate: 1.5, minimumFare: 25 },
+    auto:    { baseFare: 30, bookingFee: 1.5, distanceRate: 10, timeRate: 2.0, minimumFare: 32 },
+    car:     { baseFare: 50, bookingFee: 2.0, distanceRate: 14, timeRate: 3.0, minimumFare: 55 },
+    premier: { baseFare: 75, bookingFee: 2.0, distanceRate: 22, timeRate: 4.0, minimumFare: 80 },
+};
+
+const fareFor = (r, km, minutes) => {
+    const subtotal = r.baseFare + r.bookingFee + r.distanceRate * km + r.timeRate * minutes;
+    return Math.round(Math.max(r.minimumFare, subtotal));
+};
+
 // Define and immediately export getFare function
 const getFare = async (pickup, destination) => {
     if (!pickup || !destination) {
@@ -18,29 +33,14 @@ const getFare = async (pickup, destination) => {
     }
 
     const distanceTime = await mapService.getDistance(pickup, destination);
-
-    const baseFare = {
-        auto: 30,
-        car: 50,
-        moto: 20
-    };
-
-    const perKmRate = {
-        auto: 10,
-        car: 15,
-        moto: 8
-    };
-
-    const perMinuteRate = {
-        auto: 2,
-        car: 3,
-        moto: 1.5
-    };
+    const km = (distanceTime.distance?.value || 0) / 1000;
+    const minutes = (distanceTime.duration?.value || 0) / 60;
 
     return {
-        auto: Math.round(baseFare.auto + (perKmRate.auto * distanceTime.distance.value / 1000) + (perMinuteRate.auto * distanceTime.duration.value / 60)),
-        car: Math.round(baseFare.car + (perKmRate.car * distanceTime.distance.value / 1000) + (perMinuteRate.car * distanceTime.duration.value / 60)),
-        moto: Math.round(baseFare.moto + (perKmRate.moto * distanceTime.distance.value / 1000) + (perMinuteRate.moto * distanceTime.duration.value / 60))
+        moto: fareFor(RATES.moto, km, minutes),
+        auto: fareFor(RATES.auto, km, minutes),
+        car: fareFor(RATES.car, km, minutes),
+        premier: fareFor(RATES.premier, km, minutes),
     };
 };
 
@@ -55,7 +55,13 @@ module.exports.createRide = async ({ user, pickup, destination, vehicle }) => {
 
     try {
         const latestUser = await userModel.findById(user._id); // Fetch the latest user data
-        const fares = await getFare(pickup, destination);
+        let fares;
+        try {
+            fares = await getFare(pickup, destination);
+        } catch (fareErr) {
+            console.error('Fare estimate unavailable, using fallback — ', fareErr.message);
+            fares = { moto: 60, auto: 100, car: 150, premier: 250 };
+        }
         const ride = new rideModel({
             user: latestUser,
             pickup: pickup,
