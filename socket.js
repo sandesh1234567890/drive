@@ -17,10 +17,9 @@ function initializeSocket(server) {
 
         socket.on('join', async (data) => {
             const { userId, userType } = data;
-            // //console.log(`${userType} connected: ${socket.id}`);
+            if (!userId || !userType) return;
 
             if (userType === 'user') {
-                // //console.log(userId)
                 await userModel.findByIdAndUpdate(userId, { socketId: socket.id });
             } else if (userType === 'captain') {
                 await captainModel.findByIdAndUpdate(userId, { socketId: socket.id });
@@ -28,11 +27,20 @@ function initializeSocket(server) {
         });
 
 
-        socket.on('update-location-captain', async (data) => {
-            // //console.log("update-location-captain", data);
-            const { userId, location } = data;
+        // Join the live room for one ride — everyone in it sees the same live events
+        socket.on('join-ride', (data) => {
+            try {
+                const { rideId } = data;
+                if (!rideId) return;
+                socket.join(`ride:${rideId}`);
+            } catch (_) {}
+        });
 
-            if (!location || !location.ltd || !location.lng) {
+
+        socket.on('update-location-captain', async (data) => {
+            const { userId, rideId, location } = data;
+
+            if (!location || location.ltd === undefined || location.lng === undefined) {
                 return socket.emit('error', { message: 'Invalid location data' });
             }
 
@@ -42,18 +50,21 @@ function initializeSocket(server) {
                     lng: location.lng
                 }
             });
+
+            // Live relay — everyone watching this ride (rider + captain) gets the fresh location
+            if (rideId) {
+                io.to(`ride:${rideId}`).emit('captain-location', location);
+            }
         });
 
+
         socket.on('disconnect', () => {
-            // //console.log(`Client disconnected: ${socket.id}`);
+            // Client disconnected
         });
     });
 }
 
 const sendMessageToSocketId = (socketId, messageObject) => {
-
-    // //console.log({ body: messageObject, socketId: socketId });
-
     if (io) {
         io.to(socketId).emit(messageObject.event, messageObject.data);
     } else {
