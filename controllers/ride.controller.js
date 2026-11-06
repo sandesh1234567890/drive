@@ -132,3 +132,22 @@ module.exports.endRide = async (req, res) => {
         return res.status(500).json({ message: err.message });
     }
 }
+
+module.exports.getUserHistory = async (req, res) => {
+    try {
+        const rides = await rideModel.find({ user: req.user._id }).populate('captain', 'fullname vehicle isOnline').sort({ _id: -1 });
+        return res.status(200).json(rides);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+module.exports.getCaptainHistory = async (req, res) => {
+    try {
+        const rides = await rideModel.find({ captain: req.captain._id, status: 'accepted' })
+            .populate('user', 'fullname email').sort({ _id: -1 });
+        return res.status(200).json(rides);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};

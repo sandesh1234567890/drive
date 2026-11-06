@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+﻿const mongoose = require("mongoose");
 
 const rideSchema = new mongoose.Schema({
     user: {
@@ -48,6 +48,8 @@ const rideSchema = new mongoose.Schema({
         required: true
     }
 });
+
+rideSchema.set('timestamps', true);
 
 const rideModel = mongoose.model('Ride', rideSchema);
 module.exports = rideModel;

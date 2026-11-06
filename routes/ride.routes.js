@@ -3,6 +3,7 @@ const router = express.Router();
 const rideController = require('../controllers/ride.controller');
 const { body, query } = require('express-validator');
 const authMiddleware = require('../middlewares/auth.middleware');
+
 router.post('/create',
     authMiddleware.authUser,
     body('pickup').isString().notEmpty().isLength({ min: 3 }).withMessage('Invalid Pickup Address'),
@@ -10,6 +11,7 @@ router.post('/create',
     body('vehicle').isString().notEmpty().isIn(['auto', 'car', 'moto']).withMessage('Invalid Vehicle Type'),
     rideController.createRide
 )
+
 router.post('/confirm',
     authMiddleware.authCaptain,
     body('rideId').isMongoId().withMessage('Invalid ride id'),
@@ -27,6 +29,16 @@ router.post('/end-ride',
     authMiddleware.authCaptain,
     body('rideId').isMongoId().withMessage('Invalid ride id'),
     rideController.endRide
+)
+
+router.get('/history',
+    authMiddleware.authUser,
+    rideController.getUserHistory
+)
+
+router.get('/captain-history',
+    authMiddleware.authCaptain,
+    rideController.getCaptainHistory
 )
 
 module.exports = router;
