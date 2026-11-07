@@ -104,6 +104,8 @@ module.exports.getSuggestions = async (address) => {
 
 module.exports.getCaptainsInTheRadius = async (ltd, lng, radius) => {
     const captains = await captainModel.find({
+        isOnline: true,
+        status: 'active',
         location: {
             $geoWithin: {
                 $centerSphere: [[lng, ltd], radius / 6371],

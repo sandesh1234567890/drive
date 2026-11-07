@@ -69,3 +69,18 @@ module.exports.logoutCaptain = async (req, res, next) => {
     res.clearCookie('token');
     return res.status(200).json({ message: 'Logged out' });
 }
+
+module.exports.setOnline = async (req, res, next) => {
+    try {
+        const { online } = req.body;
+        const captain = await captainModel.findByIdAndUpdate(
+            req.captain._id,
+            { isOnline: online === true },
+            { new: true }
+        );
+        if (!captain) return res.status(404).json({ message: 'Captain not found' });
+        return res.status(200).json({ message: online === true ? 'You are online' : 'You are offline', isOnline: captain.isOnline });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}

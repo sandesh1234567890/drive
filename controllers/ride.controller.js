@@ -42,7 +42,10 @@ module.exports.createRide = async (req, res) => {
         let captainsInRadius = [];
         if (pickupCoordinates) {
             try {
-                captainsInRadius = await mapService.getCaptainsInTheRadius(pickupCoordinates.ltd, pickupCoordinates.lng, 2);
+                // Configurable dispatch radius (default 5 km, env override).
+                // Only online + active captains are offered the ride.
+                const radius = Number(process.env.DISPATCH_RADIUS_KM || 5);
+                captainsInRadius = await mapService.getCaptainsInTheRadius(pickupCoordinates.ltd, pickupCoordinates.lng, radius);
             } catch (e) {
                 console.error('Captain radius query failed:', e.message);
             }

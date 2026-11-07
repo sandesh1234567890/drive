@@ -34,6 +34,10 @@ router.get('/logout', authMiddleware.authCaptain, (req, res) => {
     captainController.logoutCaptain(req, res);
 });
 
+router.post('/online', authMiddleware.authCaptain, (req, res) => {
+    captainController.setOnline(req, res);
+});
+
 router.get('/', (req, res) => {
     res.send('Hello World');
 });

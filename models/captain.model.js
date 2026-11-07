@@ -34,6 +34,10 @@ const captainSchema = new mongoose.Schema({
         enum: ['active', 'inactive'],
         default: 'active'
     },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
     vehicle: {
         color: {
             type: String,
