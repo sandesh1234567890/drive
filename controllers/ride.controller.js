@@ -48,9 +48,11 @@ module.exports.createRide = async (req, res) => {
             }
         }
 
-        ride.otp = ""
-
+        // Respond first so the rider receives the OTP, then strip it from the
+        // in-memory doc before it is broadcast to nearby captains.
         res.status(201).json(ride);
+
+        ride.otp = ""
 
         const rideWithUser = await rideModel.findOne({ _id: ride._id }).populate('user');
         // //console.log(rideWithUser);
