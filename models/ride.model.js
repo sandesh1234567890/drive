@@ -14,6 +14,16 @@ const rideSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // Real map coordinates so tracking/captain screens render the actual
+    // trip (Barshi etc.) instead of falling back to a default city.
+    pickupLocation: {
+        ltd: { type: Number },
+        lng: { type: Number }
+    },
+    destinationLocation: {
+        ltd: { type: Number },
+        lng: { type: Number }
+    },
     status: {
         type: String,
         enum: ['pending', 'accepted', 'rejected', 'ongoing', 'completed', 'cancelled'],

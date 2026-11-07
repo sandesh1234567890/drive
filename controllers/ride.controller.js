@@ -10,21 +10,45 @@ module.exports.createRide = async (req, res) => {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { pickup, destination, vehicle } = req.body;
+    const { pickup, destination, vehicle, pickupLocation, destinationLocation } = req.body;
 
     // //console.log(req.user._id)
 
     try {
-        const ride = await rideService.createRide({ user: req.user._id, pickup, destination, vehicle });
-        res.status(201).json(ride);
+        const ride = await rideService.createRide({
+            user: req.user._id,
+            pickup,
+            destination,
+            vehicle,
+            pickupLocation,
+            destinationLocation,
+        });
 
-        const pickupCoordinates = await mapService.getAddressCoordinates(pickup);
-        // //console.log(pickupCoordinates);
+        // Geocode for captain dispatch — prefer the coordinates the app
+        // already resolved (OSRM/Nominatim on device), fall back to address.
+        let pickupCoordinates = null;
+        if (pickupLocation && typeof pickupLocation.ltd === 'number' && typeof pickupLocation.lng === 'number') {
+            pickupCoordinates = { ltd: pickupLocation.ltd, lng: pickupLocation.lng };
+        } else {
+            try {
+                pickupCoordinates = await mapService.getAddressCoordinates(pickup);
+            } catch (geoErr) {
+                console.error('Pickup geocode failed:', geoErr.message);
+            }
+        }
 
-        const captainsInRadius = await mapService.getCaptainsInTheRadius(pickupCoordinates.ltd, pickupCoordinates.lng, 2);
-        // //console.log(captainsInRadius);
+        let captainsInRadius = [];
+        if (pickupCoordinates) {
+            try {
+                captainsInRadius = await mapService.getCaptainsInTheRadius(pickupCoordinates.ltd, pickupCoordinates.lng, 2);
+            } catch (e) {
+                console.error('Captain radius query failed:', e.message);
+            }
+        }
 
         ride.otp = ""
+
+        res.status(201).json(ride);
 
         const rideWithUser = await rideModel.findOne({ _id: ride._id }).populate('user');
         // //console.log(rideWithUser);

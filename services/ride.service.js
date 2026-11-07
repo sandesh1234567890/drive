@@ -50,13 +50,34 @@ const getFare = async (pickup, destination) => {
 module.exports.getFare = getFare;
 
 // Then define and export createRide
-module.exports.createRide = async ({ user, pickup, destination, vehicle }) => {
+module.exports.createRide = async ({ user, pickup, destination, vehicle, pickupLocation, destinationLocation }) => {
     if (!user || !pickup || !destination || !vehicle) {
         throw new Error('All fields are required');
     }
 
     try {
         const latestUser = await userModel.findById(user._id); // Fetch the latest user data
+
+        // Coordinates: prefer what the app resolved on-device (accurate for
+        // local landmarks like "Barshi Stand" that remote geocoders miss),
+        // otherwise geocode the address strings server-side.
+        const toCoords = (loc) =>
+            loc && typeof loc.ltd === 'number' && typeof loc.lng === 'number'
+                ? { ltd: Number(loc.ltd), lng: Number(loc.lng) }
+                : null;
+
+        let pick = toCoords(pickupLocation);
+        let dest = toCoords(destinationLocation);
+        if (!pick || !dest) {
+            try {
+                const mapService = require('./maps.service');
+                if (!pick) pick = await mapService.getAddressCoordinates(pickup);
+                if (!dest) dest = await mapService.getAddressCoordinates(destination);
+            } catch (geoErr) {
+                console.error('Geocode fallback failed —', geoErr.message);
+            }
+        }
+
         let fares;
         try {
             fares = await getFare(pickup, destination);
@@ -68,6 +89,8 @@ module.exports.createRide = async ({ user, pickup, destination, vehicle }) => {
             user: latestUser,
             pickup: pickup,
             destination: destination,
+            pickupLocation: pick || undefined,
+            destinationLocation: dest || undefined,
             otp: getOtp(6),
             fare: fares[vehicle],
             vehicle: vehicle
