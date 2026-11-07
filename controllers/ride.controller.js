@@ -186,14 +186,21 @@ module.exports.getRideDetail = async (req, res) => {
         const { rideId } = req.params;
         const ride = await rideModel.findById(rideId)
             .populate('captain', 'fullname vehicle isOnline')
-            .populate('user', 'fullname email');
+            .populate('user', 'fullname email')
+            .select('+otp');
         if (!ride) return res.status(404).json({ message: 'Ride not found' });
 
         const isRider = req.user && String(ride.user?._id || ride.user) === String(req.user._id);
         const isCaptain = req.captain && String(ride.captain?._id || ride.captain) === String(req.captain._id);
         if (!isRider && !isCaptain) return res.status(403).json({ message: 'Not authorized for this ride' });
 
-        return res.status(200).json(ride);
+        // The rider needs the OTP to show the captain while the trip is still
+        // waiting to start (including when reopening from history). Strip it
+        // as soon as the trip is underway or over.
+        const payload = ride.toObject();
+        if (!['pending', 'accepted'].includes(payload.status)) delete payload.otp;
+
+        return res.status(200).json(payload);
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
