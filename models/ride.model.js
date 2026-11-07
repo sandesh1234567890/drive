@@ -57,6 +57,11 @@ const rideSchema = new mongoose.Schema({
         select: false,
         required: true
     },
+    paymentMethod: {
+        type: String,
+        enum: ['cash', 'upi'],
+        default: 'cash'
+    },
     // --- trip extras: cancellation, ratings, tips, receipts ---
     acceptedAt: {
         type: Date
