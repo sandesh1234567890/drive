@@ -140,6 +140,9 @@ module.exports.confirmRide = async ({ rideId, captain }) => {
         throw new Error('Ride not found');
     }
 
+    ride.status = 'accepted';
+    ride.acceptedAt = ride.acceptedAt || new Date();
+
     // Fetch the latest user data
     const latestUser = await userModel.findById(ride.user._id);
     ride.user = latestUser;
@@ -181,6 +184,8 @@ module.exports.startRide = async ({ rideId, otp, captain }) => {
         status: 'ongoing'
     });
 
+    // Reflect the new state so the caller gets the right status.
+    ride.status = 'ongoing';
     return ride;
 };
 
@@ -212,6 +217,8 @@ module.exports.endRide = async ({ rideId, captain }) => {
         status: 'completed'
     });
 
+    // Reflect the new state so the caller gets the right status.
+    ride.status = 'completed';
     return ride;
 };
 
