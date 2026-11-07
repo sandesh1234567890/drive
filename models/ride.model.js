@@ -16,7 +16,7 @@ const rideSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'rejected', 'completed'],
+        enum: ['pending', 'accepted', 'rejected', 'ongoing', 'completed', 'cancelled'],
         default: 'pending'
     },
     captain: {
@@ -46,6 +46,43 @@ const rideSchema = new mongoose.Schema({
         type: String,
         select: false,
         required: true
+    },
+    // --- trip extras: cancellation, ratings, tips, receipts ---
+    acceptedAt: {
+        type: Date
+    },
+    cancelledBy: {
+        type: String,
+        enum: ['user', 'captain', null],
+        default: null
+    },
+    cancellationFee: {
+        type: Number,
+        default: 0
+    },
+    rating: {
+        type: Number,
+        min: 1,
+        max: 5
+    },
+    review: {
+        type: String,
+        maxlength: 500,
+        default: ''
+    },
+    tip: {
+        type: Number,
+        default: 0
+    },
+    ratedBy: {
+        type: String,
+        enum: ['user', 'captain', null],
+        default: null
+    },
+    vehicle: {
+        type: String,
+        enum: ['moto', 'auto', 'car', 'premier', 'sedan', 'xl'],
+        default: 'car'
     }
 });
 

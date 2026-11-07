@@ -24,7 +24,8 @@ module.exports.createCaptain = async ({ firstname, lastname, email, password, co
         // console.log("Captain created", captain);
         return captain;
     } catch (error) {
-        throw new Error(error);
+        // Rethrow as-is so controllers can detect ValidationError / duplicate key
+        throw error;
     }
 
 };

@@ -9,7 +9,8 @@ module.exports.createUsers = async ({ firstname, lastname, email, password }) =>
         await user.save();
         return user;
     } catch (error) {
-        throw new Error(error);
+        // Rethrow as-is so controllers can detect ValidationError / duplicate key
+        throw error;
     }
 }
 

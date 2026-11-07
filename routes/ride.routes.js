@@ -8,7 +8,7 @@ router.post('/create',
     authMiddleware.authUser,
     body('pickup').isString().notEmpty().isLength({ min: 3 }).withMessage('Invalid Pickup Address'),
     body('destination').isString().notEmpty().isLength({ min: 3 }).withMessage('Invalid Destination Address'),
-    body('vehicle').isString().notEmpty().isIn(['auto', 'car', 'moto']).withMessage('Invalid Vehicle Type'),
+    body('vehicle').isString().notEmpty().isIn(['auto', 'car', 'moto', 'premier', 'sedan', 'xl']).withMessage('Invalid Vehicle Type'),
     rideController.createRide
 )
 
@@ -39,6 +39,28 @@ router.get('/history',
 router.get('/captain-history',
     authMiddleware.authCaptain,
     rideController.getCaptainHistory
+)
+
+// Trip detail / receipt — either side can fetch its own ride
+router.get('/:rideId',
+    authMiddleware.authEither,
+    rideController.getRideDetail
+)
+
+// Cancel a ride — fee rules applied server-side
+router.post('/cancel',
+    authMiddleware.authEither,
+    body('rideId').isMongoId().withMessage('Invalid ride id'),
+    rideController.cancelRide
+)
+
+// Rate + tip a completed ride
+router.post('/rate',
+    authMiddleware.authEither,
+    body('rideId').isMongoId().withMessage('Invalid ride id'),
+    body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be 1-5'),
+    body('tip').optional().isInt({ min: 0 }).withMessage('Tip must be 0 or more'),
+    rideController.rateRide
 )
 
 module.exports = router;

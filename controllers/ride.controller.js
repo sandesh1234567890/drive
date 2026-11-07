@@ -144,10 +144,73 @@ module.exports.getUserHistory = async (req, res) => {
 
 module.exports.getCaptainHistory = async (req, res) => {
     try {
-        const rides = await rideModel.find({ captain: req.captain._id, status: 'accepted' })
+        const rides = await rideModel.find({ captain: req.captain._id, status: { $in: ['accepted', 'ongoing', 'completed', 'cancelled'] } })
             .populate('user', 'fullname email').sort({ _id: -1 });
         return res.status(200).json(rides);
     } catch (err) {
         return res.status(500).json({ message: err.message });
+    }
+};
+
+// --- Trip detail / receipt ----------------------------------
+module.exports.getRideDetail = async (req, res) => {
+    try {
+        const { rideId } = req.params;
+        const ride = await rideModel.findById(rideId)
+            .populate('captain', 'fullname vehicle isOnline')
+            .populate('user', 'fullname email');
+        if (!ride) return res.status(404).json({ message: 'Ride not found' });
+
+        const isRider = req.user && String(ride.user?._id || ride.user) === String(req.user._id);
+        const isCaptain = req.captain && String(ride.captain?._id || ride.captain) === String(req.captain._id);
+        if (!isRider && !isCaptain) return res.status(403).json({ message: 'Not authorized for this ride' });
+
+        return res.status(200).json(ride);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// --- Cancel (rider or captain) ------------------------------
+module.exports.cancelRide = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const by = req.captain ? 'captain' : 'user';
+    const actor = req.captain || req.user;
+    try {
+        const ride = await rideService.cancelRide({ rideId: req.body.rideId, user: actor, by });
+
+        // Tell everyone in the ride room so both apps react instantly
+        sendMessageToSocketId(ride.user?.socketId, { event: 'ride-cancelled', data: ride });
+        if (ride.captain?.socketId) {
+            sendMessageToSocketId(ride.captain.socketId, { event: 'ride-cancelled', data: ride });
+        }
+        return res.status(200).json(ride);
+    } catch (err) {
+        if (err.code === 'RIDE_STARTED') return res.status(409).json({ message: err.message });
+        return res.status(400).json({ message: err.message });
+    }
+};
+
+// --- Rate + tip ---------------------------------------------
+module.exports.rateRide = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const by = req.captain ? 'captain' : 'user';
+    const actor = req.captain || req.user;
+    try {
+        const ride = await rideService.rateRide({
+            rideId: req.body.rideId,
+            user: actor,
+            by,
+            rating: req.body.rating,
+            review: req.body.review,
+            tip: req.body.tip,
+        });
+        return res.status(200).json(ride);
+    } catch (err) {
+        return res.status(400).json({ message: err.message });
     }
 };

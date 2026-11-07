@@ -23,6 +23,13 @@ module.exports.registerCaptain = async (req, res, next) => {
         const token = captain.generateAuthToken();
         return res.status(201).json({ token });
     } catch (error) {
+        // Mongoose validation problems are client errors, not server crashes
+        if (error && (error.name === 'ValidationError' || error.code === 11000)) {
+            const msg = error.code === 11000
+                ? 'An account with this email already exists'
+                : Object.values(error.errors || {}).map(e => e.message).join('. ') || 'Please check your details';
+            return res.status(400).json({ message: msg });
+        }
         return res.status(500).json({ error: error.message });
     }
 }
