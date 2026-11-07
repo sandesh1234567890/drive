@@ -103,14 +103,21 @@ module.exports.getSuggestions = async (address) => {
 };
 
 module.exports.getCaptainsInTheRadius = async (ltd, lng, radius) => {
+    // NOTE: captain.location is stored as { ltd, lng } (not GeoJSON Point),
+    // and there's no 2dsphere index — MongoDB $geoWithin won't match.
+    // Fetch all online + active captains, then filter by haversine distance in Node.
     const captains = await captainModel.find({
         isOnline: true,
         status: 'active',
-        location: {
-            $geoWithin: {
-                $centerSphere: [[lng, ltd], radius / 6371],
-            },
-        },
     });
-    return captains;
+    const within = [];
+    for (const c of captains) {
+        if (!c.location || c.location.ltd == null || c.location.lng == null) continue;
+        const d = haversineDistance(ltd, lng, c.location.ltd, c.location.lng);
+        const km = d.distance.value / 1000;
+        if (km <= radius) {
+            within.push(c);
+        }
+    }
+    return within;
 };
