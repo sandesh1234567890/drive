@@ -11,6 +11,8 @@ router.post('/create',
     body('vehicle').isString().notEmpty().isIn(['auto', 'car', 'moto', 'premier', 'sedan', 'xl']).withMessage('Invalid Vehicle Type'),
     body('pickupLocation').optional().isObject().withMessage('Invalid pickup location'),
     body('destinationLocation').optional().isObject().withMessage('Invalid destination location'),
+    body('distanceKm').optional().isFloat({ gt: 0 }).withMessage('Invalid distance'),
+    body('durationMin').optional().isFloat({ gt: 0 }).withMessage('Invalid duration'),
     rideController.createRide
 )
 

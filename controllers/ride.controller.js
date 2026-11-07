@@ -10,7 +10,7 @@ module.exports.createRide = async (req, res) => {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { pickup, destination, vehicle, pickupLocation, destinationLocation } = req.body;
+    const { pickup, destination, vehicle, pickupLocation, destinationLocation, distanceKm, durationMin } = req.body;
 
     // //console.log(req.user._id)
 
@@ -22,6 +22,8 @@ module.exports.createRide = async (req, res) => {
             vehicle,
             pickupLocation,
             destinationLocation,
+            distanceKm,
+            durationMin,
         });
 
         // Geocode for captain dispatch — prefer the coordinates the app

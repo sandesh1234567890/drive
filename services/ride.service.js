@@ -28,6 +28,15 @@ const fareFor = (r, km, minutes) => {
     return Math.round(Math.max(r.minimumFare, subtotal));
 };
 
+const ALL_KEYS = ['moto', 'auto', 'car', 'sedan', 'xl', 'premier'];
+
+// Fares from known route metrics (the app's OSRM result).
+const getFareFromKm = (km, minutes) => {
+    const out = {};
+    for (const k of ALL_KEYS) out[k] = fareFor(RATES[k], km, minutes);
+    return out;
+};
+
 // Define and immediately export getFare function
 const getFare = async (pickup, destination) => {
     if (!pickup || !destination) {
@@ -38,19 +47,15 @@ const getFare = async (pickup, destination) => {
     const km = (distanceTime.distance?.value || 0) / 1000;
     const minutes = (distanceTime.duration?.value || 0) / 60;
 
-    return {
-        moto: fareFor(RATES.moto, km, minutes),
-        auto: fareFor(RATES.auto, km, minutes),
-        car: fareFor(RATES.car, km, minutes),
-        premier: fareFor(RATES.premier, km, minutes),
-    };
+    return getFareFromKm(km, minutes);
 };
 
 // Export getFare before it's used
 module.exports.getFare = getFare;
+module.exports.getFareFromKm = getFareFromKm;
 
 // Then define and export createRide
-module.exports.createRide = async ({ user, pickup, destination, vehicle, pickupLocation, destinationLocation }) => {
+module.exports.createRide = async ({ user, pickup, destination, vehicle, pickupLocation, destinationLocation, distanceKm, durationMin }) => {
     if (!user || !pickup || !destination || !vehicle) {
         throw new Error('All fields are required');
     }
@@ -79,11 +84,20 @@ module.exports.createRide = async ({ user, pickup, destination, vehicle, pickupL
         }
 
         let fares;
-        try {
-            fares = await getFare(pickup, destination);
-        } catch (fareErr) {
-            console.error('Fare estimate unavailable, using fallback — ', fareErr.message);
-            fares = { moto: 60, auto: 100, car: 150, sedan: 200, xl: 280, premier: 250 };
+        // The app already has a real OSRM road route (km + minutes). Using it
+        // keeps the stored fare identical to the estimate shown at booking.
+        // Server-side geocoding is only the fallback for API/legacy callers.
+        const km = Number(distanceKm);
+        const mins = Number(durationMin);
+        if (Number.isFinite(km) && km > 0 && Number.isFinite(mins) && mins > 0) {
+            fares = getFareFromKm(km, mins);
+        } else {
+            try {
+                fares = await getFare(pickup, destination);
+            } catch (fareErr) {
+                console.error('Fare estimate unavailable, using fallback — ', fareErr.message);
+                fares = { moto: 60, auto: 100, car: 150, sedan: 200, xl: 280, premier: 250 };
+            }
         }
         const ride = new rideModel({
             user: latestUser,
